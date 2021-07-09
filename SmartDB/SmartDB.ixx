@@ -1,4 +1,5 @@
 module;
+
 #include <concepts>
 #include <string>
 #include <functional>
@@ -9,10 +10,13 @@ export module SmartDB;
 
 namespace DAdb
 {
+    #pragma region Usings
 	using namespace std;
-	
+
 	template <typename T>
 	using Comparer = function<int ( const unique_ptr<T>&, const unique_ptr<T>& )>;
+
+#pragma endregion
 
 	#pragma region Data Node
 		template <typename T>
@@ -127,39 +131,46 @@ namespace DAdb
 			return true;
 		}
 #pragma endregion
+
+        #pragma region Private functions
 	private:
-		unique_ptr<TNode<T>> createTNode (weak_ptr<DNode<T>> dbNode)
+		unique_ptr<TNode<T>> createTNode ( weak_ptr<DNode<T>> dbNode )
 		{
 			auto n = make_unique<TNode<T>> ();
 			n->dbNode = dbNode;
 
 			return std::move ( n );
 		}
-		unique_ptr<TNode<T>> placeNodeInTree (unique_ptr<TNode<T>> tNode, unique_ptr<TNode<T>>& root, Comparer<T> comparer )
+		unique_ptr<TNode<T>> placeNodeInTree ( unique_ptr<TNode<T>> tNode, unique_ptr<TNode<T>>& root, Comparer<T> comparer )
 		{
 			if ( root == nullptr )
 				return tNode;
 
-			if ( comparer(tNode->dbNode.lock()->data, root->dbNode.lock()->data ) > 0 )
+			if ( comparer ( tNode->dbNode.lock ()->data, root->dbNode.lock ()->data ) > 0 )
 			{
-				auto n = placeNodeInTree ( std::move(tNode), root->right, comparer );
+				auto n = placeNodeInTree ( std::move ( tNode ), root->right, comparer );
 				if ( n != nullptr )
-					root->right = std::move(n);
+					root->right = std::move ( n );
 			}
 			else
 			{
-				auto n = placeNodeInTree ( std::move(tNode), root->left, comparer );
+				auto n = placeNodeInTree ( std::move ( tNode ), root->left, comparer );
 				if ( n != nullptr )
-					root->left = std::move(n);
+					root->left = std::move ( n );
 			}
 			return nullptr;
 		}
 
+#pragma endregion
+
+        #pragma region Private data
 	private:
 		shared_ptr<DNode<T>> db;
 		shared_ptr<DNode<T>> last;
 		size_t s;
 		map<string, unique_ptr<TNode<T>>> indices;
+#pragma endregion
+
 	};
 }
 
