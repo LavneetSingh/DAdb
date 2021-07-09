@@ -6,8 +6,11 @@ namespace DBTests
 	TEST ( InsertToDB, InsertOne ) {
 		auto a = std::make_unique<int> ( 1 );
 		DAdb::SmartDB<int> db ( std::move ( a ) );
-
+#if _DEBUG
 		EXPECT_TRUE ( db.count () == 1 );
+#endif
+		EXPECT_TRUE ( 1 == 1 );
+
 	}
 	TEST ( InsertToDB, InsertInts ) {
 		auto a = std::make_unique<int> ( 1 );
@@ -95,13 +98,21 @@ namespace DBTests
 #endif
 	}
 
+	int compareInts ( const std::unique_ptr<int>& x, const std::unique_ptr<int>& y ) { return *x > *y ? 1 : 0; }
+	TEST ( CreateIndex, NewIndex ) {
+		std::vector<int> v{4,1,9,3,6,5,0,8,7,2};
+		DAdb::SmartDB<int> db ( std::move(std::make_unique<int> ( v[0] ) ));
+		v.erase ( v.begin () );
+		for ( auto i : v )
+		{
+			db.insert ( std::make_unique<int> ( i ) );
+		}
 
-	//TEST ( CreateIndex, NewIndex ) {
-	//	DAdb::SmartDB<int> db;
-	//	int i = 10, j = 20;
-	//	auto result = db.createIndex ( "testIndex", [=] (int x, int y) {return 1; } );
-	//	EXPECT_TRUE ( result );
-	//}
+		auto result = db.createIndex ( "testIndex", compareInts );
+
+		EXPECT_TRUE ( result );
+	}
+
 	//TEST ( CreateGraph, NewGraph ) {
 	//	DAdb::SmartDB<int> db;
 	//	int i = 10;

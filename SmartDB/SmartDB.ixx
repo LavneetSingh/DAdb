@@ -10,23 +10,26 @@ export module SmartDB;
 namespace DAdb
 {
 	using namespace std;
+	
+	template <typename T>
+	using Comparer = function<int ( const unique_ptr<T>&, const unique_ptr<T>& )>;
 
 	#pragma region Data Node
 		template <typename T>
-		struct DNod
+		struct DNode
 		{
 			unique_ptr<T> data;
-			shared_ptr<DNod> next;
+			shared_ptr<DNode> next;
 		};
 	#pragma endregion
 
 	#pragma region RBTree Node
 		template<typename T>
-		struct TNod
+		struct TNode
 		{
-			weak_ptr<DNod<T>> dbNod;
-			unique_ptr<TNod<T>> left;
-			unique_ptr<TNod<T>> right;
+			weak_ptr<DNode<T>> dbNode;
+			unique_ptr<TNode<T>> left;
+			unique_ptr<TNode<T>> right;
 		};
 
 	#pragma endregion
@@ -38,8 +41,8 @@ namespace DAdb
 	public:
 		explicit SmartDB ( unique_ptr<T> obj )
 		{
-			//last = db = make_shared<DNod<T>> ();
-			last = db = shared_ptr<DNod<T>> ( new DNod<T> () );
+			//last = db = make_shared<DNode<T>> ();
+			last = db = shared_ptr<DNode<T>> ( new DNode<T> () );
 			last->data = std::move ( obj );
 			last->next = nullptr;
 			s = 1;
@@ -49,7 +52,7 @@ namespace DAdb
 		#pragma region Database Layer
 		size_t insert ( unique_ptr<T> obj )
 		{
-			last->next = shared_ptr<DNod<T>> ( new DNod<T> () );
+			last->next = shared_ptr<DNode<T>> ( new DNode<T> () );
 			last->next->data = std::move ( obj );
 			last->next->next = nullptr;
 			last = last->next;
@@ -59,7 +62,7 @@ namespace DAdb
 		unique_ptr<T> remove ( function<bool ( const unique_ptr<T>& )> comparer )
 		{
 			auto itr = db;
-			shared_ptr<DNod<T>> itrPrev = nullptr;
+			shared_ptr<DNode<T>> itrPrev = nullptr;
 			do
 			{
 				if ( comparer ( itr->data ) )
@@ -106,11 +109,57 @@ namespace DAdb
 #endif
 #pragma endregion
 
+        #pragma region Database Indexing / Search
+		bool createIndex ( string indexID, Comparer<T> comparer )
+		{
+			auto itr = db;
+			auto root = createTNode ( itr );
+			indices.insert ( make_pair(indexID, std::move(root)));
+			itr = itr->next;
+
+			while ( itr != nullptr )
+			{
+				auto newNode = createTNode ( itr );
+				placeNodeInTree ( std::move(newNode), indices[indexID], comparer );
+				itr = itr->next;
+			}
+
+			return true;
+		}
+#pragma endregion
 	private:
-		shared_ptr<DNod<T>> db;
-		shared_ptr<DNod<T>> last;
+		unique_ptr<TNode<T>> createTNode (weak_ptr<DNode<T>> dbNode)
+		{
+			auto n = make_unique<TNode<T>> ();
+			n->dbNode = dbNode;
+
+			return std::move ( n );
+		}
+		unique_ptr<TNode<T>> placeNodeInTree (unique_ptr<TNode<T>> tNode, unique_ptr<TNode<T>>& root, Comparer<T> comparer )
+		{
+			if ( root == nullptr )
+				return tNode;
+
+			if ( comparer(tNode->dbNode.lock()->data, root->dbNode.lock()->data ) > 0 )
+			{
+				auto n = placeNodeInTree ( std::move(tNode), root->right, comparer );
+				if ( n != nullptr )
+					root->right = std::move(n);
+			}
+			else
+			{
+				auto n = placeNodeInTree ( std::move(tNode), root->left, comparer );
+				if ( n != nullptr )
+					root->left = std::move(n);
+			}
+			return nullptr;
+		}
+
+	private:
+		shared_ptr<DNode<T>> db;
+		shared_ptr<DNode<T>> last;
 		size_t s;
-		//map<string, shared_ptr<TNod<T>>> indices;
+		map<string, unique_ptr<TNode<T>>> indices;
 	};
 }
 
@@ -118,7 +167,7 @@ namespace DAdb
 //{
 //	using namespace std;
 //	template<typename T>
-//	struct DNod
+//	struct DNode
 //	{
 //		T data;
 //		shared_ptr<T> next;
