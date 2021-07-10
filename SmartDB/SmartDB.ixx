@@ -130,6 +130,22 @@ namespace DAdb
 
 			return true;
 		}
+
+#ifdef _DEBUG
+		void inorderTraversal ( string indexID, vector<T>& result ) const
+		{
+			const unique_ptr<TNode<T>>& itr = indices.at ( indexID );
+			inorderImpl ( itr, result );
+		}
+		void inorderImpl (const unique_ptr<TNode<T>>& itr, vector<T>& result ) const
+		{
+			if ( itr->left != nullptr )
+				inorderImpl ( itr->left, result );
+			result.push_back ( *(itr->dbNode.lock ()->data) );
+			if ( itr->right != nullptr )
+				inorderImpl ( itr->right, result );
+		}
+#endif
 #pragma endregion
 
         #pragma region Private functions

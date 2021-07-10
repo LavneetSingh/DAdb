@@ -99,8 +99,9 @@ namespace DBTests
 	}
 
 	int compareInts ( const std::unique_ptr<int>& x, const std::unique_ptr<int>& y ) { return *x > *y ? 1 : 0; }
-	TEST ( CreateIndex, NewIndex ) {
+	TEST ( CreateIndex, NewIndexVerifySorted ) {
 		std::vector<int> v{4,1,9,3,6,5,0,8,7,2};
+		auto s1 = v.size ();
 		DAdb::SmartDB<int> db ( std::move(std::make_unique<int> ( v[0] ) ));
 		v.erase ( v.begin () );
 		for ( auto i : v )
@@ -109,6 +110,15 @@ namespace DBTests
 		}
 
 		auto result = db.createIndex ( "testIndex", compareInts );
+#ifdef _DEBUG
+		v.clear ();
+		db.inorderTraversal ("testIndex", v);
+		
+		bool isSorted = v.size() == s1 && std::ranges::is_sorted ( v );
+		EXPECT_TRUE ( isSorted );
+
+#endif // DEBUG
+
 
 		EXPECT_TRUE ( result );
 	}
